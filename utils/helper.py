@@ -5,6 +5,7 @@ import numpy as np
 def instance_to_rankings(instance):
     """
     Convert a preflib instance to a list of rankings.
+    Returns a list of tuples, where each tuple is a ranking in permutation format (ranking[pos] = item_id).
     """
     flat = instance.flatten_strict()
     rankings = []
@@ -16,6 +17,7 @@ def instance_to_rankings(instance):
 def rankings_to_instance(rankings):
     """
     Convert a list of rankings to a preflib instance.
+    Returns an OrdinalInstance object.
     """
     instance = OrdinalInstance()
     instance.num_alternatives = len(rankings[0])
@@ -30,6 +32,7 @@ def rankings_to_list_dicts(rankings):
     Supports two input formats for each ranking:
     1) permutation format: ranking[pos] = item_id (strict total order)
     2) rank-vector format: ranking[item_id-1] = rank (possibly with ties)
+    Returns a list of dicts, where each dict maps item_id to its rank for that agent.
     """
     list_dicts = []
     for ranking in rankings:
@@ -40,7 +43,6 @@ def rankings_to_list_dicts(rankings):
         if is_permutation:
             d = {item: rank + 1 for rank, item in enumerate(values)}
         else:
-            # Already in rank-vector form: index is item_id-1, value is rank.
             d = {item_id: int(values[item_id - 1]) for item_id in range(1, m + 1)}
 
         list_dicts.append(d)
@@ -50,7 +52,7 @@ def rankings_to_list_dicts(rankings):
 def list_dicts_to_array(list_dicts):
     """
     Convert list of dicts {item: rank} to numpy array format.
-    Output array[agent_id, item_id-1] = rank
+    Returns array[agent_id, item_id-1] = rank
     """
     n = len(list_dicts)
     m = len(list_dicts[0])

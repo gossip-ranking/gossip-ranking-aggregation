@@ -1,9 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
-from collections import defaultdict
 
-# Set seaborn style and colorblind-friendly palette
 sns.set_style("whitegrid")
 sns.set_palette("colorblind")
 
@@ -17,12 +15,12 @@ def plot_results(
     horizon = config.get("horizon", 0)
     plt.rcParams.update(
         {
-            "font.size": 10,  # Base font size
-            "axes.labelsize": 10,  # Axis label size
-            "axes.titlesize": 10,  # Title size
-            "xtick.labelsize": 8,  # X tick label size
-            "ytick.labelsize": 8,  # Y tick label size
-            "legend.fontsize": 10,  # Legend font size
+            "font.size": 10,
+            "axes.labelsize": 10,
+            "axes.titlesize": 10, 
+            "xtick.labelsize": 8,
+            "ytick.labelsize": 8,
+            "legend.fontsize": 10,
         }
     )
     for res, name, color, marker in zip(results, list_names, colors, markers):
@@ -80,8 +78,8 @@ def plot_results(
     if metric == "consensus":
         eps = config.get("eps", 0.0)
         maxi = 1.0 + eps * 10
-        # different line styles for bias lines
-        styles = ["--", ":", "-."]  # Different line styles for bias lines
+        
+        styles = ["--", ":", "-."]
         if biases is not None:
             for bias, name, color, style in zip(biases, list_names, colors, styles):
                 plt.axhline(
@@ -174,8 +172,7 @@ def plot_multigraph_results(results, dataset_name: str, legend: str = "score"):
                     linestyle=linestyle,
                     color=color,
                 )
-
-            # All methods on consensus plot
+            # Plot consensus errors
             line = ax_consensus.plot(
                 mean_err_consensus,
                 marker=marker,
@@ -239,7 +236,6 @@ def plot_multigraph_results(results, dataset_name: str, legend: str = "score"):
         bbox_inches="tight",
     )
 
-    # Configure Copeland score plot
     ax_score_c.set_title("MSE of Scores vs. Iterations (Copeland)")
     if legend in ["score", "both"]:
         plotted_graph_types_c = set()

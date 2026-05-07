@@ -1,6 +1,6 @@
 import numpy as np
 from numba import njit
-
+from utils.helper import rankings_to_list_dicts
 
 @njit
 def _rim_single(ref_order, phi, m, u):
@@ -59,10 +59,6 @@ def generate_mallows(n, m, ref_ranking, phi=0.7, seed=0):
 
     return _rim_batch(ref_order, float(phi), m, n, uniforms)
 
-
-import numpy as np
-from utils.helper import rankings_to_list_dicts
-from mallows import generate_mallows  # your existing file
 
 
 def generate_mallows_mixture(n, m, components, seed=0):

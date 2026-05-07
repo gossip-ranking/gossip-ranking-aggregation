@@ -1,8 +1,10 @@
 import numpy as np
 
 
-# create a dict of dicts for pairwise scores
 def get_pairwise_scores(list_dicts):
+    """
+    Compute pairwise preference scores from a list of ranking dictionaries.
+    """
     items = sorted(list_dicts[0].keys())
     dict_pairwise_scores = {a: {b: 0 for b in items} for a in items}
     for d in list_dicts:
@@ -14,18 +16,27 @@ def get_pairwise_scores(list_dicts):
 
 
 def borda_scores(list_dicts):
+    """
+    Compute Borda scores from a list of ranking dictionaries.
+    """
     items = sorted(list_dicts[0].keys())
     b_scores = {item: np.mean([d[item] for d in list_dicts]) for item in items}
     return b_scores
 
 
 def borda_consensus(list_dicts):
+    """
+    Compute Borda consensus from a list of ranking dictionaries.
+    """
     b_scores = borda_scores(list_dicts)
     consensus = sorted(b_scores.keys(), key=lambda x: b_scores[x], reverse=False)
     return consensus, b_scores
 
 
 def copeland_scores(list_dicts):
+    """
+    Compute Copeland scores from a list of ranking dictionaries.
+    """
     dict_pairwise_scores = get_pairwise_scores(list_dicts)
     items = sorted(list_dicts[0].keys())
     c_scores = {
@@ -39,6 +50,10 @@ def copeland_scores(list_dicts):
 
 
 def copeland_consensus(list_dicts):
+    """
+    Compute Copeland consensus from a list of ranking dictionaries.
+    """
+
     c_scores = copeland_scores(list_dicts)
     consensus = sorted(c_scores.keys(), key=lambda x: c_scores[x], reverse=False)
     return consensus, c_scores

@@ -43,19 +43,24 @@ def _borda_trial_numba(
     rand_idx,
     iterations,
     consensus_every,
-    topk=-1,
     mask=None,
 ):
+    """
+    Numba utility function for formatted Borda consensus trial.
+    x: (n, m) array of local Borda scores
+    true_score: (m,) array of average Borda scores
+    true_consensus: (m,) array of ranks for true consensus
+    edges: (num_edges, 2) array of agent pairs
+    mask: optional boolean array of shape (n,) to specify which agents to include in consensus error
+    Returns: score_errors, consensus_errors
+    """
+    
     n, m = x.shape
     score_errors = np.empty(iterations, dtype=np.float64)
     consensus_errors = np.empty(iterations, dtype=np.float64)
     last_consensus = 0.0
 
-    if topk >= 0:
-        order = np.argsort(true_consensus)
-        top_idx = order[:topk]
-    else:
-        top_idx = np.empty(0, dtype=np.int64)
+    top_idx = np.empty(0, dtype=np.int64)
 
     # Main loop of decentralized Borda consensus algorithm
     for t in range(iterations):
@@ -82,15 +87,7 @@ def _borda_trial_numba(
             mean_dist = 0.0
             for a in range(n):
                 ranking = 1 + np.argsort(np.argsort(x[a]))
-                if topk >= 0:
-                    tmp_rank = np.empty(topk, dtype=np.int64)
-                    tmp_true = np.empty(topk, dtype=np.int64)
-                    for p in range(topk):
-                        it = top_idx[p]
-                        tmp_rank[p] = ranking[it]
-                        tmp_true[p] = true_consensus[it]
-                    mean_dist += kendall_tau_distance_numba(tmp_rank, tmp_true)
-                elif mask is not None and not mask[a] or mask is None:
+                if mask is not None and not mask[a] or mask is None:
                     mean_dist += kendall_tau_distance_numba(ranking, true_consensus)
             last_consensus = mean_dist / n
         consensus_errors[t] = last_consensus
@@ -102,7 +99,7 @@ def _borda_trial_numba(
 def copeland_consensus_numba(rankings):
     """
     Compute Copeland consensus from rankings array.
-    Input: rankings array where rankings[agent_id, item_id-1] = rank
+    rankings: array where rankings[agent_id, item_id-1] = rank
     Returns: x (pairwise preference matrix), true_score (average pairwise), true_consensus
     """
     n, m = rankings.shape
@@ -144,9 +141,15 @@ def _copeland_trial_numba(
     rand_idx,
     iterations,
     consensus_every,
-    topk=None,
     mask=None,
 ):
+    """
+    Numba utility function for formatted Copeland consensus trial.
+    x: (n, m, m) pairwise preference matrices
+    true_score: (m, m) average pairwise preference matrix
+    true_consensus: (m,) array of ranks for true consensus
+    edges: (num_edges, 2) array of agent pairs
+    """
     n = x.shape[0]
     m = x.shape[1]
 
@@ -154,11 +157,7 @@ def _copeland_trial_numba(
     consensus_errors = np.empty(iterations, dtype=np.float64)
     last_consensus = 0.0
 
-    if topk >= 0:
-        order = np.argsort(true_consensus)
-        top_idx = order[:topk]
-    else:
-        top_idx = np.empty(0, dtype=np.int64)
+    top_idx = np.empty(0, dtype=np.int64)
 
     for t in range(iterations):
         idx = rand_idx[t]
@@ -192,15 +191,7 @@ def _copeland_trial_numba(
                             count += 1.0
                     scores[i2] = count
                 ranking = 1 + np.argsort(np.argsort(-scores))
-                if topk >= 0:
-                    tmp_rank = np.empty(topk, dtype=np.int64)
-                    tmp_true = np.empty(topk, dtype=np.int64)
-                    for p in range(topk):
-                        it = top_idx[p]
-                        tmp_rank[p] = ranking[it]
-                        tmp_true[p] = true_consensus[it]
-                    mean_dist += kendall_tau_distance_numba(tmp_rank, tmp_true)
-                elif mask is not None and not mask[a] or mask is None:
+                if mask is not None and not mask[a] or mask is None:
                     mean_dist += kendall_tau_distance_numba(ranking, true_consensus)
                 rankings[a] = ranking
 
@@ -216,10 +207,15 @@ def run_borda_trial(
     iterations=100,
     seed=42,
     consensus_every=10,
-    topk=-1,
     true_consensus=None,
     **kwargs,
 ):
+    """
+    Run decentralized Borda consensus trial.
+    data: array of shape (n, m) with rankings
+    edges: array of shape (num_edges, 2) with agent pairs
+    Returns: score_errors, consensus_errors 
+    """
     rankings = np.asarray(data, dtype=np.int64)
     edges_arr = np.asarray(edges, dtype=np.int64)
     rng = np.random.default_rng(seed)
@@ -236,7 +232,6 @@ def run_borda_trial(
         rand_idx,
         iterations,
         consensus_every,
-        topk=topk,
         **kwargs,
     )
 
@@ -247,10 +242,16 @@ def run_copeland_trial(
     iterations=100,
     seed=42,
     consensus_every=10,
-    topk=-1,
     true_consensus=None,
     **kwargs,
 ):
+    """
+    Run decentralized Copeland consensus trial.
+    data: array of shape (n, m) with rankings
+    edges: array of shape (num_edges, 2) with agent pairs
+    Returns: score_errors, consensus_errors
+    
+    """
     rankings = np.asarray(data, dtype=np.int64)
     edges_arr = np.asarray(edges, dtype=np.int64)
     rng = np.random.default_rng(seed)
@@ -267,26 +268,8 @@ def run_copeland_trial(
         rand_idx,
         iterations,
         consensus_every,
-        topk=topk,
         **kwargs,
     )
-
-
-def run_borda_trials(datasets, edges, iterations=100, seed=42, n_trials=10):
-
-    edges_arr = np.asarray(edges, dtype=np.int64)
-    rng = np.random.default_rng(seed)
-    rand_idx = rng.integers(
-        0, len(edges_arr), size=(n_trials, iterations), dtype=np.int64
-    )
-    final_consensuses = []
-    for trial in range(n_trials):
-        rankings = np.asarray(datasets[trial], dtype=np.int64)
-        final_consensus = borda_consensus_at_T(
-            rankings, edges_arr, rand_idx[trial], iterations
-        )
-        final_consensuses.append(final_consensus)
-    return final_consensuses
 
 
 from utils.asyladmm import asyladmm_update_numba
@@ -321,9 +304,7 @@ def decentralized_footrule_numba(
         mean_dist = 0.0
         for agent in range(n):
             ranking = 1 + np.argsort(np.argsort(x[agent]))
-
             mean_dist += kendall_tau_distance_numba(ranking, true_consensus)
-
         errors[t] = mean_dist / n
 
     return errors
